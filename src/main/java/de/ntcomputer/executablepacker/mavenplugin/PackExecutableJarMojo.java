@@ -184,7 +184,6 @@ public class PackExecutableJarMojo extends AbstractMojo {
 		archiver.setOutputFile(outputJarFile);
 		archive.setForced(forceCreation);
 		archive.addManifestEntry("Main-Class", ExecutableLauncher.class.getName());
-		archive.addManifestEntry(ExecutableLauncher.MANIFEST_APPLICATION_MAIN_CLASS, mainClass);
 		archive.addManifestEntry(ExecutableLauncher.MANIFEST_DEPENDENCY_LIBPATH, realLibPath);
 		archive.addManifestEntry(ExecutableLauncher.MANIFEST_DEPENDENCY_JARS, dependencyJarFileMetaStringBuilder.toString());
 

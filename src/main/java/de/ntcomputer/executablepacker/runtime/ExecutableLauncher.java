@@ -23,17 +23,14 @@ import java.util.jar.Manifest;
  *
  */
 public class ExecutableLauncher {
-	public static final String MANIFEST_APPLICATION_MAIN_CLASS = "Application-Main-Class";
 	public static final String MANIFEST_DEPENDENCY_LIBPATH = "Dependency-Libpath";
 	public static final String MANIFEST_DEPENDENCY_JARS = "Dependency-Jars";
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException, NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 		// get original classloader
 		ClassLoader outerJarClassLoader = Thread.currentThread().getContextClassLoader();
-		ClassLoader usedClassLoader = outerJarClassLoader;
-		
+
 		// parse Manifest file
-		String applicationMainClassName = null;
 		String dependencyLibPath = null;
 		String dependencyJarFilenames = null;
 		
@@ -46,32 +43,18 @@ public class ExecutableLauncher {
 		while(manifestURLs.hasMoreElements()) {
 			URL manifestURL = manifestURLs.nextElement();
 			try {
-				InputStream manifestStream = manifestURL.openStream();
-				try {
+				try (InputStream manifestStream = manifestURL.openStream()) {
 					Manifest manifest = new Manifest(manifestStream);
 					Attributes manifestAttributes = manifest.getMainAttributes();
-					String manifestApplicationMainClassName = manifestAttributes.getValue(MANIFEST_APPLICATION_MAIN_CLASS);
 					String manifestDependencyLibPath = manifestAttributes.getValue(MANIFEST_DEPENDENCY_LIBPATH);
 					String manifestDependencyJarFilenames = manifestAttributes.getValue(MANIFEST_DEPENDENCY_JARS);
-					if(manifestApplicationMainClassName!=null) {
-						manifestApplicationMainClassName = manifestApplicationMainClassName.trim();
-						if(!manifestApplicationMainClassName.trim().isEmpty()) {
-							applicationMainClassName = manifestApplicationMainClassName;
-							dependencyLibPath = manifestDependencyLibPath;
-							dependencyJarFilenames = manifestDependencyJarFilenames;
-							break; // This is the correct manifest
-						}
-					}
-				} finally {
-					manifestStream.close();
+					dependencyLibPath = manifestDependencyLibPath;
+					dependencyJarFilenames = manifestDependencyJarFilenames;
+					break; // This is the correct manifest
 				}
 			} catch(Exception e) {
 				// Ignore exceptions while parsing a single manifest file
 			}
-		}
-		
-		if(applicationMainClassName==null) {
-			throw new IOException("Manifest is missing entry " + MANIFEST_APPLICATION_MAIN_CLASS); // No manifest contained the required metadata
 		}
 		
 		if(dependencyLibPath==null) {
@@ -110,16 +93,10 @@ public class ExecutableLauncher {
 				// do NOT use outerJarClassLoader as parent!
 				// If it is used, the main class (see below) would be found by the parent class loader,
 				// and the defined main class would only be able to use the parent class loader (which found the class), not the dependency loader.
-				
-				usedClassLoader = jarInJarClassLoader;
+
 				Thread.currentThread().setContextClassLoader(jarInJarClassLoader);
 			}
 		}
-		
-		// launch the actual application
-		Class<?> applicationMainClass = Class.forName(applicationMainClassName, true, usedClassLoader);
-		Method applicationMainMethod = applicationMainClass.getMethod("main", String[].class);
-		applicationMainMethod.invoke(null, (Object) args);
 	}
 
 }
